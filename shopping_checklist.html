@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Shopping">
+<meta name="theme-color" content="#7c3aed">
+<title>Shopping Checklist</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#f5f4ff;--card:#fff;--border:#e4e0f7;--text:#1a1a1a;--muted:#888;
+    --purple:#7c3aed;--purple-light:#ede9fe;--purple-dark:#5b21b6;
+    --must:#dc2626;--must-bg:#fef2f2;--must-border:#fecaca;
+    --good:#d97706;--good-bg:#fffbeb;--good-border:#fde68a;
+    --bought-bg:#f0fdf4;--bought-text:#aaa;
+    --green:#16a34a;
+    --radius:14px;--radius-sm:10px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:48px}
+
+  .header{background:var(--purple);padding:52px 20px 20px;color:#fff}
+  .header h1{font-size:22px;font-weight:600;letter-spacing:-0.3px}
+  .header p{font-size:13px;opacity:0.75;margin-top:4px}
+
+  .summary-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px;background:var(--purple-dark)}
+  .sum-item{text-align:center;color:#fff}
+  .sum-num{font-size:20px;font-weight:600}
+  .sum-lbl{font-size:10px;opacity:0.75;margin-top:1px}
+
+  .progress-wrap{padding:0 16px;background:var(--purple-dark);padding-bottom:14px}
+  .progress-track{height:6px;background:rgba(255,255,255,0.25);border-radius:3px;overflow:hidden}
+  .progress-fill{height:100%;background:#fff;border-radius:3px;transition:width 0.4s}
+
+  .filter-bar{display:flex;gap:8px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .filter-btn{flex:1;padding:7px 4px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);cursor:pointer;font-family:inherit}
+  .filter-btn.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+
+  .body{padding:12px 16px}
+  .cat-section{margin-bottom:16px}
+  .cat-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--purple-light);border-radius:var(--radius-sm);margin-bottom:4px}
+  .cat-name{font-size:13px;font-weight:600;color:var(--purple-dark);text-transform:uppercase;letter-spacing:0.04em}
+  .cat-count{font-size:12px;color:var(--purple)}
+  .cat-items{display:flex;flex-direction:column;gap:2px}
+
+  .item-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer}
+  .item-row.must{border-left:3px solid var(--must);background:var(--must-bg)}
+  .item-row.good{border-left:3px solid var(--good);background:var(--good-bg)}
+  .item-row.bought{background:var(--bought-bg);border-color:#bbf7d0;border-left-width:1px}
+  .item-row:active{opacity:0.7}
+
+  .item-text{flex:1;min-width:0}
+  .item-name{font-size:14px;line-height:1.3}
+  .item-row.bought .item-name{color:var(--bought-text);text-decoration:line-through;text-decoration-color:#aaa}
+  .item-tag{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;margin-top:4px;letter-spacing:0.03em}
+  .tag-must{background:var(--must-bg);color:var(--must);border:1px solid var(--must-border)}
+  .tag-good{background:var(--good-bg);color:var(--good);border:1px solid var(--good-border)}
+  .item-row.bought .item-tag{opacity:0.4}
+
+  .check-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;background:transparent}
+  .check-btn.checked{background:var(--green);border-color:var(--green)}
+  .check-icon{width:14px;height:14px;opacity:0}
+  .check-btn.checked .check-icon{opacity:1}
+
+  .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+  .legend{display:flex;gap:10px;padding:10px 16px 4px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Shopping checklist</h1>
+  <p>Buy these before you start packing</p>
+</div>
+<div class="summary-bar">
+  <div class="sum-item"><div class="sum-num" id="sum-bought">0</div><div class="sum-lbl">Bought</div></div>
+  <div class="sum-item"><div class="sum-num" id="sum-total">0</div><div class="sum-lbl">Total</div></div>
+  <div class="sum-item"><div class="sum-num" id="sum-pct">0%</div><div class="sum-lbl">Done</div></div>
+</div>
+<div class="progress-wrap">
+  <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('must',this)">Must have</button>
+  <button class="filter-btn" onclick="setFilter('remaining',this)">Still to buy</button>
+  <button class="filter-btn" onclick="setFilter('bought',this)">Bought</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#fecaca;border:1px solid #dc2626"></div> Must have before flying</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border:1px solid #d97706"></div> Good to have</div>
+</div>
+
+<div class="body" id="list-body"></div>
+
+<script>
+const MUST = 'must';
+const GOOD = 'good';
+
+const SECTIONS = [
+  {cat:'Electronics', items:[
+    {id:'s1',  name:'20,000 mAh power bank',             tag:MUST},
+    {id:'s2',  name:'Type-C to Lightning cable × 2',     tag:MUST},
+    {id:'s3',  name:'Universal travel adapter',           tag:MUST},
+  ]},
+  {cat:'Eyewear & accessories', items:[
+    {id:'s4',  name:'Sunglasses — metal frame + cover + cloth', tag:GOOD},
+    {id:'s5',  name:'Running sunglasses',                tag:GOOD},
+    {id:'s6',  name:'Casio watch',                       tag:GOOD},
+    {id:'s7',  name:'Fossil watch',                      tag:GOOD},
+    {id:'s8',  name:'Anti-fog spray for eyeglasses',     tag:GOOD},
+    {id:'s9',  name:'Luggage scale',                     tag:MUST},
+    {id:'s10', name:'Document pouch',                    tag:MUST},
+    {id:'s11', name:'Wallet',                            tag:MUST},
+  ]},
+  {cat:'Documents to gather', items:[
+    {id:'s12', name:'Documents file folder (A4)',         tag:MUST},
+    {id:'s13', name:'10th marksheet',                    tag:MUST},
+    {id:'s14', name:'12th marksheet',                    tag:MUST},
+    {id:'s15', name:'B.Arch degree',                     tag:MUST},
+    {id:'s16', name:'Transcript',                        tag:MUST},
+    {id:'s17', name:'Baptism certificate',               tag:MUST},
+    {id:'s18', name:'First Communion certificate',       tag:MUST},
+    {id:'s19', name:'Confirmation certificate',          tag:MUST},
+    {id:'s20', name:'Birth certificate',                 tag:MUST},
+    {id:'s21', name:'Active passport',                   tag:MUST},
+    {id:'s22', name:'Passport photographs × 30',         tag:MUST},
+    {id:'s23', name:'Old passports',                     tag:MUST},
+    {id:'s24', name:'International driver\'s licence',   tag:MUST},
+    {id:'s25', name:'Port of Entry Letter',              tag:MUST},
+    {id:'s26', name:'PAL',                               tag:MUST},
+    {id:'s27', name:'Letter of Acceptance',              tag:MUST},
+    {id:'s28', name:'Tuition fees receipt',              tag:MUST},
+    {id:'s29', name:'GIC Certificate',                   tag:MUST},
+    {id:'s30', name:'Biometrics invoice',                tag:MUST},
+    {id:'s31', name:'Medical exam invoice',              tag:MUST},
+    {id:'s32', name:'Proof of funds docket',             tag:MUST},
+    {id:'s33', name:'Travel insurance',                  tag:MUST},
+    {id:'s34', name:'Flight tickets',                    tag:MUST},
+    {id:'s35', name:'Steinbach accommodation proof',     tag:MUST},
+  ]},
+  {cat:'Medical documents', items:[
+    {id:'s36', name:'Regular meds prescription (TC approved)', tag:MUST},
+    {id:'s37', name:'Hair treatment prescription',       tag:GOOD},
+    {id:'s38', name:'Eye prescription',                  tag:MUST},
+  ]},
+  {cat:'Stationery', items:[
+    {id:'s39', name:'Mechanical pencil',                 tag:GOOD},
+    {id:'s40', name:'Mechanical pencil lead',            tag:GOOD},
+    {id:'s41', name:'Small pen',                         tag:GOOD},
+    {id:'s42', name:'Normal pen',                        tag:GOOD},
+    {id:'s43', name:'Clear folders',                     tag:GOOD},
+  ]},
+  {cat:'Grooming & toiletries', items:[
+    {id:'s44', name:'Toothbrush',                        tag:MUST},
+    {id:'s45', name:'Toothpaste',                        tag:MUST},
+    {id:'s46', name:'Tongue cleaner',                    tag:MUST},
+    {id:'s47', name:'Shampoo + conditioner',             tag:MUST},
+    {id:'s48', name:'Body wash',                         tag:MUST},
+    {id:'s49', name:'Body oil',                          tag:GOOD},
+    {id:'s50', name:'Face wash',                         tag:MUST},
+    {id:'s51', name:'Face cream',                        tag:MUST},
+    {id:'s52', name:'Hair serum',                        tag:GOOD},
+    {id:'s53', name:'Sunscreen',                         tag:MUST},
+    {id:'s54', name:'Nail clipper',                      tag:MUST},
+    {id:'s55', name:'Nail filer',                        tag:GOOD},
+    {id:'s56', name:'Portable jet spray',                tag:MUST},
+    {id:'s57', name:'Towel',                             tag:MUST},
+    {id:'s58', name:'Razor',                             tag:MUST},
+    {id:'s59', name:'Razor foam',                        tag:MUST},
+    {id:'s60', name:'Petroleum jelly',                   tag:GOOD},
+    {id:'s61', name:'Lip balm',                          tag:GOOD},
+    {id:'s62', name:'Ear buds',                          tag:GOOD},
+    {id:'s63', name:'Hand sanitiser',                    tag:MUST},
+  ]},
+  {cat:'Medicines & vitamins', items:[
+    {id:'s64', name:'Antacid',                           tag:MUST},
+    {id:'s65', name:'Pain killers',                      tag:MUST},
+    {id:'s66', name:'Band-aid',                          tag:MUST},
+    {id:'s67', name:'Cold & flu meds',                   tag:MUST},
+    {id:'s68', name:'Nasal spray',                       tag:MUST},
+    {id:'s69', name:'Multi vitamins',                    tag:MUST},
+    {id:'s70', name:'Vitamin D3',                        tag:MUST},
+    {id:'s71', name:'Vitamin B12',                       tag:MUST},
+    {id:'s72', name:'Cetirizine',                        tag:MUST},
+  ]},
+  {cat:'Clothes — thermals & basics', items:[
+    {id:'s73', name:'Thermal set × 2',                   tag:MUST},
+    {id:'s74', name:'Thick socks × 6 pairs',             tag:MUST},
+    {id:'s75', name:'Dark gray plain t-shirt',           tag:GOOD},
+    {id:'s76', name:'Rust plain t-shirt',                tag:GOOD},
+    {id:'s77', name:'Maroon plain t-shirt',              tag:GOOD},
+    {id:'s78', name:'Black plain t-shirt',               tag:GOOD},
+    {id:'s79', name:'Brown plain t-shirt',               tag:GOOD},
+    {id:'s80', name:'White plain t-shirt',               tag:GOOD},
+    {id:'s81', name:'Dark green plain t-shirt',          tag:GOOD},
+    {id:'s82', name:'Navy blue collar t-shirt',          tag:GOOD},
+    {id:'s83', name:'Light gray collar t-shirt',         tag:GOOD},
+    {id:'s84', name:'Navy blue shirt',                   tag:GOOD},
+    {id:'s85', name:'White shirt',                       tag:GOOD},
+    {id:'s86', name:'Black shirt',                       tag:GOOD},
+    {id:'s87', name:'Gray zipper sweatshirt',            tag:MUST},
+    {id:'s88', name:'Brown jacket',                      tag:MUST},
+    {id:'s89', name:'Blue jeans',                        tag:MUST},
+    {id:'s90', name:'Dark gray chino',                   tag:GOOD},
+    {id:'s91', name:'Black jeans',                       tag:MUST},
+  ]},
+  {cat:'Kitchen & cookware', items:[
+    {id:'s92', name:'Cooker + spare whistle & gasket',   tag:MUST},
+    {id:'s93', name:'Non-stick pan (medium)',             tag:MUST},
+    {id:'s94', name:'Non-stick pan (small)',              tag:GOOD},
+    {id:'s95', name:'Tea / milk pan',                    tag:MUST},
+    {id:'s96', name:'Frother machine + attachments',     tag:GOOD},
+    {id:'s97', name:'Tea filter / garni',                tag:MUST},
+    {id:'s98', name:'Plastic chamcha + ladle',           tag:MUST},
+    {id:'s99', name:'Tongs / sansi',                     tag:GOOD},
+    {id:'s100',name:'Masala organiser',                  tag:GOOD},
+  ]},
+  {cat:'Masalas & food', items:[
+    {id:'s101',name:'Chai masala & chai patti',          tag:MUST},
+    {id:'s102',name:'Oregano & chilli flakes',           tag:GOOD},
+    {id:'s103',name:'Hing, ajwain, kalonji',             tag:MUST},
+    {id:'s104',name:'Kashmiri red chilli powder',        tag:MUST},
+    {id:'s105',name:'Ready-to-eat meals + noodles',      tag:MUST},
+    {id:'s106',name:'Instant khichdi mix',               tag:MUST},
+  ]},
+  {cat:'Watches to buy', items:[
+    {id:'s107',name:'Casio watch',                       tag:GOOD},
+    {id:'s108',name:'Fossil watch',                      tag:GOOD},
+  ]},
+];
+
+let bought = {};
+let currentFilter = 'all';
+
+async function loadState() {
+  try {
+    const r = await window.storage.get('bought_state');
+    if (r && r.value) bought = JSON.parse(r.value);
+  } catch(e) { bought = {}; }
+}
+
+async function saveState() {
+  try { await window.storage.set('bought_state', JSON.stringify(bought)); } catch(e) {}
+}
+
+const allItems = SECTIONS.flatMap(s => s.items);
+
+function updateSummary() {
+  const total = allItems.length;
+  const done = allItems.filter(i => bought[i.id]).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('sum-bought').textContent = done;
+  document.getElementById('sum-total').textContent = total;
+  document.getElementById('sum-pct').textContent = pct+'%';
+  document.getElementById('prog-fill').style.width = pct+'%';
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  updateSummary();
+  const body = document.getElementById('list-body');
+  body.innerHTML = '';
+  let anyVisible = false;
+
+  SECTIONS.forEach(sec => {
+    const filtered = sec.items.filter(item => {
+      if (currentFilter === 'must') return item.tag === MUST && !bought[item.id];
+      if (currentFilter === 'remaining') return !bought[item.id];
+      if (currentFilter === 'bought') return !!bought[item.id];
+      return true;
+    });
+    if (!filtered.length) return;
+    anyVisible = true;
+
+    const boughtInCat = sec.items.filter(i => bought[i.id]).length;
+    const section = document.createElement('div');
+    section.className = 'cat-section';
+    section.innerHTML = `<div class="cat-header"><span class="cat-name">${sec.cat}</span><span class="cat-count">${boughtInCat}/${sec.items.length}</span></div><div class="cat-items" id="sec-${sec.cat.replace(/\W/g,'_')}"></div>`;
+    body.appendChild(section);
+
+    const itemsEl = section.querySelector('.cat-items');
+    filtered.forEach(item => {
+      const isBought = !!bought[item.id];
+      const row = document.createElement('div');
+      row.className = 'item-row' + (isBought ? ' bought' : (' ' + item.tag));
+      const tagLabel = item.tag === MUST ? 'Must have before flying' : 'Good to have';
+      const tagClass = item.tag === MUST ? 'tag-must' : 'tag-good';
+      row.innerHTML = `
+        <div class="item-text">
+          <div class="item-name">${item.name}</div>
+          ${!isBought ? `<span class="item-tag ${tagClass}">${tagLabel}</span>` : ''}
+        </div>
+        <div class="check-btn ${isBought ? 'checked' : ''}" onclick="toggleItem('${item.id}',event)">
+          <svg class="check-icon" viewBox="0 0 14 14" fill="none">
+            <polyline points="2,7 5.5,10.5 12,3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>`;
+      itemsEl.appendChild(row);
+    });
+  });
+
+  if (!anyVisible) {
+    body.innerHTML = '<div class="empty-state">Nothing here</div>';
+  }
+}
+
+async function toggleItem(id, e) {
+  e.stopPropagation();
+  bought[id] = !bought[id];
+  await saveState();
+  render();
+}
+
+(async () => {
+  await loadState();
+  render();
+})();
+</script>
+</body>
+</html>
